@@ -18,8 +18,8 @@ let clientData = [];
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 600,
-    height: 900,
-    icon: path.join(__dirname, 'assets', 'icon.ico'),
+    height: 950,
+    icon: path.join(__dirname, 'assets', 'b2.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #b6b5b5 0%, #5c5b5b 100%);
             height: 100vh;
             display: flex;
             justify-content: center;
@@ -36,15 +36,15 @@
             margin-bottom: 25px;
         }
 
-        .header h1 {
-            color: #667eea;
-            font-size: 26px;
+        .header-logo {
+            max-width: 150px;
+            height: auto;
             margin-bottom: 5px;
         }
 
         .header p {
             color: #666;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .status {
@@ -76,7 +76,7 @@
             text-align: center;
             margin: 15px 0;
             padding: 20px;
-            background: #f9f9f9;
+            background: #f1f1f1;
             border-radius: 10px;
         }
 
@@ -93,21 +93,31 @@
         }
 
         .buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+            display: grid;
+            grid-template-columns: (1fr, 1fr);
+            gap: 10px;
+            justify-items: center;
+            margin-top: 5px;
         }
 
         button {
-            padding: 14px 25px;
+            width: 100%;
+            padding: 12px 0px;
             border: none;
             border-radius: 10px;
-            font-size: 15px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            min-height: 50px;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            word-wrap: break-word;
+            white-space: normal;
+            line-height: 1.2;
         }
 
         button:hover:not(:disabled) {
@@ -124,6 +134,7 @@
         .btn-connect {
             background: #25D366;
             color: white;
+            grid-column: 1 / 3;
         }
 
         .btn-play {
@@ -144,7 +155,6 @@
         .btn-save {
             background: #2196F3;
             color: white;
-            margin-top: 10px;
         }
 
         .log {
@@ -160,7 +170,7 @@
 
         .log-entry {
             padding: 4px 0;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #f1f1f1;
             line-height: 1.5;
         }
 
@@ -174,8 +184,7 @@
         }
 
         .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196F3;
+            background: #f1f1f1;
             padding: 12px;
             margin-top: 15px;
             border-radius: 5px;
@@ -195,7 +204,7 @@
         }
 
         .stat-card {
-            background: #f9f9f9;
+            background: #f1f1f1;
             padding: 12px;
             border-radius: 8px;
             text-align: center;
@@ -235,8 +244,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🛋️ Artestofados Bot</h1>
-            <p>Atendimento Automático WhatsApp</p>
+            <img src="./assets/b2.png" alt="Logo" class="header-logo">
+            <p>Atendimento Automático Artestofados</p>
         </div>
 
         <div id="status" class="status disconnected">
@@ -253,7 +262,7 @@
             <button id="btnPlay" class="btn-play" disabled>▶️ Iniciar Bot</button>
             <button id="btnPause" class="btn-pause" disabled>⏸️ Pausar Bot</button>
             <button id="btnDisconnect" class="btn-disconnect" disabled>🔌 Desconectar</button>
-            <button id="btnSave" class="btn-save" disabled>💾 Salvar Dados (Excel)</button>
+            <button id="btnSave" class="btn-save" disabled>💾 Salvar Dados</button>
         </div>
 
         <div class="stats">
@@ -268,12 +277,11 @@
         </div>
 
         <div class="info-box">
-            <strong>ℹ️ Como usar:</strong>
+            <strong>Como usar:</strong>
             1. Clique em "Conectar WhatsApp"<br>
             2. Escaneie o QR Code com seu celular<br>
             3. Clique em "Iniciar Bot" para ativar<br>
             4. Use "Pausar" para interromper temporariamente<br>
-            5. Clique em "Salvar Dados" para exportar para Excel
         </div>
 
         <div id="log" class="log"></div>
