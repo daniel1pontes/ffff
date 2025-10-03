@@ -1,0 +1,85 @@
+{
+  "name": "artestofados-whatsapp-bot",
+  "version": "1.0.0",
+  "description": "Chatbot WhatsApp para Artestofados",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --trace-warnings",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux",
+    "test-calendar": "node scripts/testar-google-calendar.js",
+    "limpar-sessao": "node scripts/limpar-sessao.js",
+    "backup": "node scripts/backup-dados.js",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "com.artestofados.whatsappbot",
+    "productName": "Artestofados Bot",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.business"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "assets/icon.png",
+      "category": "Office"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Artestofados Bot",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico"
+    },
+    "files": [
+      "**/*",
+      "!**/*.md",
+      "!scripts/**/*",
+      "!.gitignore",
+      "!google-credentials.json"
+    ],
+    "extraResources": [
+      {
+        "from": "google-credentials.json",
+        "to": "google-credentials.json",
+        "filter": ["**/*"]
+      }
+    ]
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "chatbot",
+    "electron",
+    "artestofados"
+  ],
+  "author": "Artestofados",
+  "license": "MIT",
+  "dependencies": {
+    "whatsapp-web.js": "^1.23.0",
+    "qrcode": "^1.5.3",
+    "xlsx": "^0.18.5",
+    "googleapis": "^126.0.0",
+    "electron-store": "^8.1.0"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  }
+}

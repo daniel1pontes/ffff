@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artestofados Bot - WhatsApp</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 26px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .status {
+            text-align: center;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status.disconnected {
+            background: #fee;
+            color: #c33;
+        }
+
+        .status.connected {
+            background: #efe;
+            color: #3c3;
+        }
+
+        .status.paused {
+            background: #ffe;
+            color: #cc3;
+        }
+
+        .qr-container {
+            display: none;
+            text-align: center;
+            margin: 15px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+
+        .qr-container img {
+            max-width: 250px;
+            border: 5px solid #667eea;
+            border-radius: 10px;
+        }
+
+        .qr-container p {
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        button {
+            padding: 14px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-connect {
+            background: #25D366;
+            color: white;
+        }
+
+        .btn-play {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-pause {
+            background: #FF9800;
+            color: white;
+        }
+
+        .btn-disconnect {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-save {
+            background: #2196F3;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid #ddd;
+            line-height: 1.5;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .timestamp {
+            color: #999;
+            margin-right: 8px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛋️ Artestofados Bot</h1>
+            <p>Atendimento Automático WhatsApp</p>
+        </div>
+
+        <div id="status" class="status disconnected">
+            ⚫ Desconectado
+        </div>
+
+        <div id="qrContainer" class="qr-container">
+            <p>Escaneie o QR Code com seu WhatsApp:</p>
+            <img id="qrImage" src="" alt="QR Code">
+        </div>
+
+        <div class="buttons">
+            <button id="btnConnect" class="btn-connect">📱 Conectar WhatsApp</button>
+            <button id="btnPlay" class="btn-play" disabled>▶️ Iniciar Bot</button>
+            <button id="btnPause" class="btn-pause" disabled>⏸️ Pausar Bot</button>
+            <button id="btnDisconnect" class="btn-disconnect" disabled>🔌 Desconectar</button>
+            <button id="btnSave" class="btn-save" disabled>💾 Salvar Dados (Excel)</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="number" id="totalAtendimentos">0</div>
+                <div class="label">Total de Atendimentos</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="atendimentosHoje">0</div>
+                <div class="label">Atendimentos Hoje</div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>ℹ️ Como usar:</strong>
+            1. Clique em "Conectar WhatsApp"<br>
+            2. Escaneie o QR Code com seu celular<br>
+            3. Clique em "Iniciar Bot" para ativar<br>
+            4. Use "Pausar" para interromper temporariamente<br>
+            5. Clique em "Salvar Dados" para exportar para Excel
+        </div>
+
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let totalAtendimentos = 0;
+        let atendimentosHoje = 0;
+
+        const btnConnect = document.getElementById('btnConnect');
+        const btnPlay = document.getElementById('btnPlay');
+        const btnPause = document.getElementById('btnPause');
+        const btnDisconnect = document.getElementById('btnDisconnect');
+        const btnSave = document.getElementById('btnSave');
+        const statusDiv = document.getElementById('status');
+        const qrContainer = document.getElementById('qrContainer');
+        const qrImage = document.getElementById('qrImage');
+        const logDiv = document.getElementById('log');
+
+        function addLog(message) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span>${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+
+            if (message.includes('Atendimento concluído')) {
+                totalAtendimentos++;
+                atendimentosHoje++;
+                updateStats();
+            }
+        }
+
+        function updateStatus(status, text) {
+            statusDiv.className = `status ${status}`;
+            statusDiv.textContent = text;
+        }
+
+        function updateStats() {
+            document.getElementById('totalAtendimentos').textContent = totalAtendimentos;
+            document.getElementById('atendimentosHoje').textContent = atendimentosHoje;
+        }
+
+        btnConnect.addEventListener('click', () => {
+            window.electronAPI.connectWhatsApp();
+            btnConnect.disabled = true;
+        });
+
+        btnPlay.addEventListener('click', () => {
+            window.electronAPI.toggleBot(true);
+            updateStatus('connected', '🟢 Conectado - Bot Ativo');
+            btnPlay.disabled = true;
+            btnPause.disabled = false;
+        });
+
+        btnPause.addEventListener('click', () => {
+            window.electronAPI.toggleBot(false);
+            updateStatus('paused', '🟡 Conectado - Bot Pausado');
+            btnPause.disabled = true;
+            btnPlay.disabled = false;
+        });
+
+        btnDisconnect.addEventListener('click', () => {
+            window.electronAPI.disconnectWhatsApp();
+        });
+
+        btnSave.addEventListener('click', () => {
+            window.electronAPI.saveData();
+        });
+
+        window.electronAPI.onQRReceived((qr) => {
+            qrImage.src = qr;
+            qrContainer.style.display = 'block';
+        });
+
+        window.electronAPI.onWhatsAppConnected(() => {
+            qrContainer.style.display = 'none';
+            updateStatus('connected', '🟢 Conectado');
+            btnConnect.disabled = true;
+            btnPlay.disabled = false;
+            btnDisconnect.disabled = false;
+            btnSave.disabled = false;
+        });
+
+        window.electronAPI.onWhatsAppDisconnected(() => {
+            updateStatus('disconnected', '⚫ Desconectado');
+            btnConnect.disabled = false;
+            btnPlay.disabled = true;
+            btnPause.disabled = true;
+            btnDisconnect.disabled = true;
+            btnSave.disabled = true;
+        });
+
+        window.electronAPI.onLog((message) => {
+            addLog(message);
+        });
+
+        addLog('🚀 Sistema iniciado. Clique em "Conectar WhatsApp" para começar.');
+    </script>
+</body>
+</html>

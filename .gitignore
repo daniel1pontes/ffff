@@ -1,0 +1,38 @@
+# Dependências
+node_modules/
+package-lock.json
+
+# Builds
+dist/
+build/
+*.exe
+*.dmg
+*.AppImage
+
+# Credenciais sensíveis
+google-credentials.json
+
+# Sessões WhatsApp
+whatsapp-session/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dados temporários
+*.tmp
+*.temp
+
+# Excel gerados
+*.xlsx
