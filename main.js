@@ -54,51 +54,84 @@ app.on('window-all-closed', () => {
 // Conectar WhatsApp
 ipcMain.on('connect-whatsapp', async (event) => {
   try {
+    event.reply('log', 'Iniciando conexão com WhatsApp...');
+    
     whatsappClient = new Client({
       authStrategy: new LocalAuth({
         dataPath: path.join(app.getPath('userData'), 'whatsapp-session')
       }),
       puppeteer: {
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
+          '--disable-software-rasterizer'
+        ]
       }
     });
 
+    // QR Code
     whatsappClient.on('qr', async (qr) => {
-      const qrDataUrl = await QRCode.toDataURL(qr);
-      event.reply('qr-received', qrDataUrl);
-      event.reply('log', 'QR Code gerado. Escaneie com seu WhatsApp.');
+      try {
+        const qrDataUrl = await QRCode.toDataURL(qr);
+        event.reply('qr-received', qrDataUrl);
+        event.reply('log', 'QR Code gerado. Escaneie com seu WhatsApp.');
+      } catch (error) {
+        event.reply('log', `❌ Erro ao gerar QR Code: ${error.message}`);
+      }
     });
 
+    // Autenticado
+    whatsappClient.on('authenticated', () => {
+      event.reply('log', '✓ WhatsApp autenticado! Aguardando conexão...');
+    });
+
+    // Pronto para usar
     whatsappClient.on('ready', () => {
       event.reply('whatsapp-connected');
-      event.reply('log', '✓ WhatsApp conectado com sucesso!');
+      event.reply('log', '✅ WhatsApp conectado e pronto para uso!');
     });
 
-    whatsappClient.on('authenticated', () => {
-      event.reply('log', 'WhatsApp autenticado!');
-    });
-
+    // Falha na autenticação
     whatsappClient.on('auth_failure', (msg) => {
       event.reply('log', `❌ Falha na autenticação: ${msg}`);
+      event.reply('whatsapp-disconnected');
     });
 
+    // Desconectado
     whatsappClient.on('disconnected', (reason) => {
       event.reply('whatsapp-disconnected');
       event.reply('log', `🔌 Desconectado: ${reason}`);
       botActive = false;
     });
 
+    // Loading screen
+    whatsappClient.on('loading_screen', (percent, message) => {
+      event.reply('log', `Carregando: ${percent}% - ${message}`);
+    });
+
+    // Mensagens recebidas
     whatsappClient.on('message', async (message) => {
       if (botActive && !message.fromMe && message.from.endsWith('@c.us')) {
-        await handleIncomingMessage(message, event);
+        try {
+          await handleIncomingMessage(message, event);
+        } catch (error) {
+          event.reply('log', `❌ Erro ao processar mensagem: ${error.message}`);
+        }
       }
     });
 
+    // Inicializar cliente
     await whatsappClient.initialize();
-    event.reply('log', 'Iniciando conexão com WhatsApp...');
+    
   } catch (error) {
     event.reply('log', `❌ Erro ao conectar: ${error.message}`);
+    event.reply('whatsapp-disconnected');
   }
 });
 
@@ -112,7 +145,10 @@ ipcMain.on('disconnect-whatsapp', async (event) => {
       
       // Salvar dados antes de desconectar
       if (clientData.length > 0) {
-        saveToExcel();
+        const filePath = saveToExcel();
+        if (filePath) {
+          event.reply('log', `💾 Dados salvos automaticamente em: ${filePath}`);
+        }
       }
       
       event.reply('whatsapp-disconnected');
@@ -127,9 +163,9 @@ ipcMain.on('disconnect-whatsapp', async (event) => {
 ipcMain.on('toggle-bot', (event, active) => {
   botActive = active;
   if (active) {
-    event.reply('log', '✓ Bot iniciado - Pronto para atender clientes');
+    event.reply('log', '✅ Bot iniciado - Pronto para atender clientes');
   } else {
-    event.reply('log', '⏸ Bot pausado');
+    event.reply('log', '⏸️ Bot pausado');
   }
 });
 
@@ -138,7 +174,13 @@ async function handleIncomingMessage(message, event) {
   const phoneNumber = message.from;
   const messageText = message.body.trim();
 
-  event.reply('log', `📥 Mensagem de ${phoneNumber}: ${messageText.substring(0, 30)}...`);
+  event.reply('log', `📥 Mensagem de ${phoneNumber.substring(0, 15)}...: ${messageText.substring(0, 30)}...`);
+
+  // Verificar palavras de reinício
+  const palavrasReinicio = ['oi', 'olá', 'menu', 'início', 'reiniciar', 'começar'];
+  if (palavrasReinicio.includes(messageText.toLowerCase())) {
+    delete conversations[phoneNumber];
+  }
 
   if (!conversations[phoneNumber]) {
     conversations[phoneNumber] = {
@@ -151,7 +193,7 @@ async function handleIncomingMessage(message, event) {
     
     const greetingMsg = "Olá! 👋 Bem-vindo à *Artestofados*! 🛋️\n\nSomos especializados em fabricação e reforma de estofados.\n\nPara começar, qual é o seu nome?";
     await message.reply(greetingMsg);
-    event.reply('log', `📤 Enviando saudação para ${phoneNumber}`);
+    event.reply('log', `📤 Saudação enviada para ${phoneNumber.substring(0, 15)}...`);
     return;
   }
 
@@ -173,9 +215,9 @@ async function handleIncomingMessage(message, event) {
       } else if (messageText === '2') {
         conversation.data.service = 'Reforma';
         conversation.step = 'waitPhoto';
-        response = "Ótimo! Para avaliarmos melhor, você poderia enviar uma foto do estofado que deseja reformar? 📸";
+        response = "Ótimo! Para avaliarmos melhor, você poderia enviar uma foto do estofado que deseja reformar? 📸\n\n(Ou digite *PULAR* para continuar sem foto)";
       } else {
-        response = "Por favor, digite 1 para Fabricação ou 2 para Reforma.";
+        response = "Por favor, digite *1* para Fabricação ou *2* para Reforma.";
       }
       break;
 
@@ -187,18 +229,20 @@ async function handleIncomingMessage(message, event) {
         conversation.step = 'askProject';
         response = "Você já tem um projeto definido ou gostaria de decidir o modelo junto com nossa equipe?\n\n1️⃣ Já tenho um projeto\n2️⃣ Quero ajuda para decidir\n\nDigite 1 ou 2:";
       } else {
-        response = "Por favor, digite um número de 1 a 4.";
+        response = "Por favor, digite um número de *1* a *4*.";
       }
       break;
 
     case 'waitPhoto':
-      if (message.hasMedia) {
-        conversation.data.photo = 'Foto recebida';
+      if (message.hasMedia || messageText.toLowerCase() === 'pular') {
+        conversation.data.photo = message.hasMedia ? 'Foto recebida' : 'Sem foto';
         conversation.data.productType = 'Reforma de estofado';
         conversation.step = 'askProject';
-        response = "Obrigado pela foto! 📸\n\nVocê já tem um projeto definido ou gostaria de decidir junto com nossa equipe?\n\n1️⃣ Já tenho um projeto\n2️⃣ Quero ajuda para decidir\n\nDigite 1 ou 2:";
+        response = message.hasMedia 
+          ? "Obrigado pela foto! 📸\n\nVocê já tem um projeto definido ou gostaria de decidir junto com nossa equipe?\n\n1️⃣ Já tenho um projeto\n2️⃣ Quero ajuda para decidir\n\nDigite 1 ou 2:"
+          : "Ok! Vamos continuar.\n\nVocê já tem um projeto definido ou gostaria de decidir junto com nossa equipe?\n\n1️⃣ Já tenho um projeto\n2️⃣ Quero ajuda para decidir\n\nDigite 1 ou 2:";
       } else {
-        response = "Por favor, envie a foto do estofado para continuarmos.";
+        response = "Por favor, envie a *foto* do estofado ou digite *PULAR* para continuar.";
       }
       break;
 
@@ -208,7 +252,7 @@ async function handleIncomingMessage(message, event) {
         conversation.step = 'askMeeting';
         response = "Excelente! Como você prefere continuar?\n\n1️⃣ Agendar reunião online\n2️⃣ Visitar nossa loja\n\nDigite 1 ou 2:";
       } else {
-        response = "Por favor, digite 1 ou 2.";
+        response = "Por favor, digite *1* ou *2*.";
       }
       break;
 
@@ -216,25 +260,25 @@ async function handleIncomingMessage(message, event) {
       if (messageText === '1' || messageText === '2') {
         conversation.data.meetingType = messageText === '1' ? 'Reunião Online' : 'Visita Presencial';
         conversation.step = 'askContact';
-        response = "Perfeito! Para finalizar, preciso de algumas informações:\n\nQual o melhor número de contato? (Digite apenas os números)";
+        response = "Perfeito! Para finalizar, preciso de algumas informações:\n\nQual o melhor número de contato?\n\n(Digite apenas os números, exemplo: 83999887766)";
       } else {
-        response = "Por favor, digite 1 ou 2.";
+        response = "Por favor, digite *1* ou *2*.";
       }
       break;
 
     case 'askContact':
       conversation.data.contact = messageText;
       conversation.step = 'askDate';
-      response = "Qual data você prefere para o atendimento?\n\n(Por favor, use o formato: DD/MM/AAAA)\nExemplo: 15/12/2024";
+      response = "Qual data você prefere para o atendimento?\n\n(Use o formato: DD/MM/AAAA)\n\nExemplo: 15/12/2024";
       break;
 
     case 'askDate':
       if (isValidDate(messageText)) {
         conversation.data.date = messageText;
         conversation.step = 'askTime';
-        response = "E qual horário você prefere?\n\n(Por favor, use o formato: HH:MM)\nExemplo: 14:30";
+        response = "E qual horário você prefere?\n\n(Use o formato: HH:MM)\n\nExemplo: 14:30";
       } else {
-        response = "Data inválida. Por favor, use o formato DD/MM/AAAA\nExemplo: 15/12/2024";
+        response = "Data inválida. Por favor, use o formato *DD/MM/AAAA*\n\nExemplo: 15/12/2024";
       }
       break;
 
@@ -249,32 +293,26 @@ async function handleIncomingMessage(message, event) {
         // Criar evento no Google Calendar
         await createCalendarEvent(conversation.data, event);
         
-        response = `Perfeito! ✅\n\n*Agendamento confirmado:*\n\n👤 Nome: ${conversation.data.name}\n📞 Contato: ${conversation.data.contact}\n🛋️ Serviço: ${conversation.data.service}\n📦 Tipo: ${conversation.data.productType}\n📅 Data: ${conversation.data.date}\n⏰ Horário: ${conversation.data.time}\n📍 Tipo: ${conversation.data.meetingType}\n\nEnviaremos uma confirmação e mais detalhes em breve.\n\n*Obrigado por escolher a Artestofados!* 🛋️✨`;
+        response = `Perfeito! ✅\n\n*AGENDAMENTO CONFIRMADO*\n\n👤 Nome: ${conversation.data.name}\n📞 Contato: ${conversation.data.contact}\n🛋️ Serviço: ${conversation.data.service}\n📦 Tipo: ${conversation.data.productType}\n📅 Data: ${conversation.data.date}\n⏰ Horário: ${conversation.data.time}\n📍 Tipo: ${conversation.data.meetingType}\n\nEnviaremos uma confirmação e mais detalhes em breve.\n\n*Obrigado por escolher a Artestofados!* 🛋️✨`;
         
-        event.reply('log', `✓ Atendimento concluído: ${conversation.data.name} - ${conversation.data.date} ${conversation.data.time}`);
+        event.reply('log', `✅ Atendimento concluído: ${conversation.data.name} - ${conversation.data.date} ${conversation.data.time}`);
         
         // Limpar conversa após 5 minutos
         setTimeout(() => {
           delete conversations[phoneNumber];
         }, 300000);
       } else {
-        response = "Horário inválido. Por favor, use o formato HH:MM\nExemplo: 14:30";
+        response = "Horário inválido. Por favor, use o formato *HH:MM*\n\nExemplo: 14:30";
       }
       break;
 
     default:
-      response = "Desculpe, ocorreu um erro. Vamos começar novamente?\nDigite *OI* para reiniciar.";
-      if (messageText.toLowerCase() === 'oi') {
-        delete conversations[phoneNumber];
-        const greetingMsg = "Olá! 👋 Bem-vindo à *Artestofados*! 🛋️\n\nPara começar, qual é o seu nome?";
-        await message.reply(greetingMsg);
-        return;
-      }
+      response = "Desculpe, ocorreu um erro. Vamos começar novamente?\n\nDigite *OI* para reiniciar o atendimento.";
   }
 
   if (response) {
     await message.reply(response);
-    event.reply('log', `📤 Resposta enviada para ${phoneNumber}`);
+    event.reply('log', `📤 Resposta enviada`);
   }
 }
 
@@ -329,11 +367,10 @@ function saveToExcel() {
 // Criar evento no Google Calendar
 async function createCalendarEvent(data, event) {
   try {
-    // Carregar credenciais do Google Calendar
     const credentialsPath = path.join(__dirname, 'google-credentials.json');
     
     if (!fs.existsSync(credentialsPath)) {
-      event.reply('log', '⚠️ Arquivo google-credentials.json não encontrado. Configure as credenciais da API.');
+      event.reply('log', '⚠️ Google Calendar não configurado (arquivo google-credentials.json não encontrado)');
       return;
     }
 
@@ -349,7 +386,7 @@ async function createCalendarEvent(data, event) {
     const [day, month, year] = data.date.split('/');
     const [hour, minute] = data.time.split(':');
     const startDateTime = new Date(year, month - 1, day, hour, minute);
-    const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // +1 hora
+    const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
     const calendarEvent = {
       summary: `${data.service} - ${data.name}`,
@@ -371,23 +408,27 @@ async function createCalendarEvent(data, event) {
       }
     };
 
-    const response = await calendar.events.insert({
+    await calendar.events.insert({
       calendarId: 'primary',
       resource: calendarEvent
     });
 
     event.reply('log', `📅 Evento criado no Google Calendar: ${data.name}`);
   } catch (error) {
-    event.reply('log', `⚠️ Erro ao criar evento no Calendar: ${error.message}`);
+    event.reply('log', `⚠️ Não foi possível criar evento no Calendar: ${error.message}`);
   }
 }
 
-// Salvar dados ao fechar
-ipcMain.on('save-data', () => {
+// Salvar dados manualmente
+ipcMain.on('save-data', (event) => {
   if (clientData.length > 0) {
     const filePath = saveToExcel();
     if (filePath) {
-      mainWindow.webContents.send('log', `💾 Dados salvos em: ${filePath}`);
+      event.reply('log', `💾 Dados salvos em: ${filePath}`);
+    } else {
+      event.reply('log', '❌ Erro ao salvar dados');
     }
+  } else {
+    event.reply('log', 'ℹ️ Nenhum dado para salvar');
   }
 });

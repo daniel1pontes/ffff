@@ -31,8 +31,8 @@ module.exports = {
 
   // Horários disponíveis para agendamento
   horariosDisponiveis: [
-    '08:00', '09:00', '10:00', '11:00',
-    '14:00', '15:00', '16:00', '17:00'
+    '07:30', '08:30', '09:30', '10:30', '11:30', '12:30',
+    '14:30', '15:30', '16:30', '17:00'
   ],
 
   // Configurações do Excel
